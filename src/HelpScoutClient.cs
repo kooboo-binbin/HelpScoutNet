@@ -30,9 +30,9 @@ namespace HelpScoutNet
                     ContractResolver = new CamelCasePropertyNamesContractResolver(),
                     NullValueHandling = NullValueHandling.Ignore,
                     DefaultValueHandling = DefaultValueHandling.Ignore,
-                    DateFormatHandling = DateFormatHandling.IsoDateFormat,                    
+                    DateFormatHandling = DateFormatHandling.IsoDateFormat,
                 };
-                serializer.Converters.Add(new StringEnumConverter {CamelCaseText = true});
+                serializer.Converters.Add(new StringEnumConverter { CamelCaseText = true });
 
                 return serializer;
             }
@@ -48,7 +48,7 @@ namespace HelpScoutNet
         {
             return Get<Paged<Mailbox>>("mailboxes.json", requestArg);
         }
-        
+
         public Mailbox GetMailbox(int mailboxId, FieldRequest requestArg = null)
         {
             var singleItem = Get<SingleItem<Mailbox>>(string.Format("mailboxes/{0}.json", mailboxId), requestArg);
@@ -58,7 +58,7 @@ namespace HelpScoutNet
 
         public Paged<Folder> GetFolder(int folderId, PageRequest requestArg = null)
         {
-            return Get<Paged<Folder>>(string.Format("/mailboxes/{0}/folders.json", folderId), requestArg);            
+            return Get<Paged<Folder>>(string.Format("/mailboxes/{0}/folders.json", folderId), requestArg);
         }
         #endregion
 
@@ -66,7 +66,7 @@ namespace HelpScoutNet
 
         public Paged<Conversation> ListConservations(int mailboxId, ConversationRequest requestArg = null)
         {
-            
+
             string endpoint = string.Format("mailboxes/{0}/conversations.json", mailboxId);
 
             return Get<Paged<Conversation>>(endpoint, requestArg);
@@ -80,7 +80,7 @@ namespace HelpScoutNet
         }
 
         public Paged<Conversation> ListConservationsForCustomer(int mailboxId, int customerId, ConversationRequest requestArg = null)
-        {            
+        {
             string endpoint = string.Format("mailboxes/{0}/customers/{1}/conversations.json", mailboxId, customerId);
 
             return Get<Paged<Conversation>>(endpoint, requestArg);
@@ -107,7 +107,7 @@ namespace HelpScoutNet
         public Conversation CreateConversation(Conversation conversation, bool imported = false, bool autoReply = false, bool reload = true)
         {
             string endpoint = "conversations.json";
-            return Post(endpoint, conversation, new CreateCustomerRequest{AutoReply = autoReply, Reload = reload, Imported = imported});
+            return Post(endpoint, conversation, new CreateCustomerRequest { AutoReply = autoReply, Reload = reload, Imported = imported });
         }
 
         public Conversation UpdateConversation(Conversation conversation, bool reload = true)
@@ -118,7 +118,7 @@ namespace HelpScoutNet
 
         public Thread CreateThread(int conversationId, Thread thread, bool imported = false, bool reload = true)
         {
-            string endpoint = string.Format("conversations/{0}.json",conversationId);
+            string endpoint = string.Format("conversations/{0}.json", conversationId);
 
             return Post(endpoint, thread, new PostOrPutRequest { Reload = reload });
         }
@@ -172,7 +172,7 @@ namespace HelpScoutNet
         {
             string endpoint = string.Format("customers/{0}.json", customerId);
 
-            return Put(endpoint, customer, new PostOrPutRequest{ Reload = reload});
+            return Put(endpoint, customer, new PostOrPutRequest { Reload = reload });
         }
         #endregion
 
@@ -231,7 +231,7 @@ namespace HelpScoutNet
 
         public Paged<User> ListUserPerMailbox(int mailboxId, FieldRequest requestArg)
         {
-            string endpoint = string.Format("mailboxes/{0}/users.json",mailboxId);
+            string endpoint = string.Format("mailboxes/{0}/users.json", mailboxId);
 
             return Get<Paged<User>>(endpoint, requestArg);
         }
@@ -247,13 +247,42 @@ namespace HelpScoutNet
             return Get<Paged<Workflow>>(endpoint, requestArg);
         }
 
-
         #endregion
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="fileName"></param>
+        /// <param name="data"></param>
+        /// <returns></returns>
+        public string CreateDocument(string fileName, byte[] bytes)
+        {
+            var endpoint = "attachments.json";
+            var request = new AttachmentRequest();
+            request.FileName = fileName;
+            request.MimeType = MimeTypeHelper.GetMimeTypeByFileName(fileName);
+            request.Data = Convert.ToBase64String(bytes);
+
+            var client = InitHttpClient();
+            var json = JsonConvert.SerializeObject(request, _serializerSettings);
+            var httpContent = new StringContent(json, Encoding.UTF8, "application/json");
+            var response = client.PostAsync(BaseUrl + endpoint, httpContent).Result;
+            string body = response.Content.ReadAsStringAsync().Result;
+
+            if (response.IsSuccessStatusCode)
+            {
+                return JsonConvert.DeserializeObject<SingleItem<AttachmentHash>>(body).Item.Hash;
+            }
+
+            var error = JsonConvert.DeserializeObject<HelpScoutError>(body);
+            throw new HelpScoutApiException(error, body);
+
+        }
 
         private T Get<T>(string endpoint, IRequest request) where T : class
         {
             var client = InitHttpClient();
-            
+
             HttpResponseMessage response = client.GetAsync(BaseUrl + endpoint + ToQueryString(request)).Result;
             string body = response.Content.ReadAsStringAsync().Result;
 
@@ -265,10 +294,10 @@ namespace HelpScoutNet
             }
 
             var error = JsonConvert.DeserializeObject<HelpScoutError>(body);
-            throw new HelpScoutApiException(error, body);                                                                 
+            throw new HelpScoutApiException(error, body);
         }
 
-        private T Post<T>(string endpoint, T payload, IPostOrPutRequest request) 
+        private T Post<T>(string endpoint, T payload, IPostOrPutRequest request)
         {
             var client = InitHttpClient();
 
@@ -288,13 +317,13 @@ namespace HelpScoutNet
                 else
                 {
                     return payload;
-                }  
+                }
             }
-            
+
             var error = JsonConvert.DeserializeObject<HelpScoutError>(body);
             throw new HelpScoutApiException(error, body);
         }
-        
+
         private T Put<T>(string endpoint, T payload, IPostOrPutRequest request)
         {
             var client = InitHttpClient();
@@ -304,7 +333,7 @@ namespace HelpScoutNet
 
             HttpResponseMessage response = client.PutAsync(BaseUrl + endpoint + ToQueryString(request), new StringContent(jsonPayload, Encoding.UTF8, "application/json")).Result;
             string body = response.Content.ReadAsStringAsync().Result;
-            
+
             if (response.IsSuccessStatusCode)
             {
                 if (request.Reload)
@@ -315,7 +344,7 @@ namespace HelpScoutNet
                 else
                 {
                     return payload;
-                }                
+                }
             }
 
             var error = JsonConvert.DeserializeObject<HelpScoutError>(body);
@@ -332,13 +361,13 @@ namespace HelpScoutNet
 
         private static string ToQueryString(IRequest request)
         {
-            NameValueCollection nvc = null;            
+            NameValueCollection nvc = null;
             if (request != null)
             {
                 nvc = request.ToNameValueCollection();
             }
-                
-            if(nvc == null) 
+
+            if (nvc == null)
                 return string.Empty;
 
             var array = (from key in nvc.AllKeys

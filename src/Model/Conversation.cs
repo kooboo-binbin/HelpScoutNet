@@ -47,17 +47,19 @@ namespace HelpScoutNet.Model
         api,
         chat
     }
-    
+
     public class Attachment
     {
         [DefaultValue(0)]
         public int Id { get; set; }
+        public string Hash { get; set; }
         public string MimeType { get; set; }
         public string Filename { get; set; }
         public int Size { get; set; }
         public int Width { get; set; }
         public int Height { get; set; }
         public string Url { get; set; }
+
     }
 
 
