@@ -116,11 +116,11 @@ namespace HelpScoutNet
             return Put(endpoint, conversation, new PostOrPutRequest { Reload = reload });
         }
 
-        public Thread CreateThread(int conversationId, Thread thread, bool imported = false, bool reload = true)
+        public Conversation CreateThread(int conversationId, Thread thread, bool imported = false, bool reload = true)
         {
             string endpoint = string.Format("conversations/{0}.json", conversationId);
 
-            return Post(endpoint, thread, new PostOrPutRequest { Reload = reload });
+            return Post<Thread, Conversation>(endpoint, thread, new PostOrPutRequest { Reload = reload });
         }
 
         #endregion
@@ -299,6 +299,21 @@ namespace HelpScoutNet
 
         private T Post<T>(string endpoint, T payload, IPostOrPutRequest request)
         {
+            return Post<T, T>(endpoint, payload, request);
+        }
+
+        /// <summary>
+        /// The resturn type is not the same with input type
+        /// such as CreateThread() the input type is thread but the reload type is conversation
+        /// </summary>
+        /// <typeparam name="Tin"></typeparam>
+        /// <typeparam name="Tout"></typeparam>
+        /// <param name="endpoint"></param>
+        /// <param name="payload"></param>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        private Tout Post<Tin, Tout>(string endpoint, Tin payload, IPostOrPutRequest request)
+        {
             var client = InitHttpClient();
 
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
@@ -311,12 +326,12 @@ namespace HelpScoutNet
             {
                 if (request.Reload)
                 {
-                    T result = JsonConvert.DeserializeObject<SingleItem<T>>(body).Item;
+                    Tout result = JsonConvert.DeserializeObject<SingleItem<Tout>>(body).Item;
                     return result;
                 }
                 else
                 {
-                    return payload;
+                    return default(Tout);
                 }
             }
 
